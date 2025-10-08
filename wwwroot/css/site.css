@@ -1,0 +1,18 @@
+.layout-wrapper {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 220px;
+    background: #f8f9fa;
+    padding: 2rem 1rem;
+    border-right: 1px solid #dee2e6;
+    min-height: 100vh;
+}
+
+.main-content {
+    flex: 1;
+    padding-left: 2rem;
+    padding-top: 2rem;
+}
