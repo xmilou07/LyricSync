@@ -11,7 +11,10 @@
 </head>
 <body>
     <div class="layout-wrapper">
-        <nav class="sidebar">
+        <button class="sidebar-toggle d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle sidebar">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <nav class="sidebar collapse d-md-block" id="sidebarMenu">
             <a class="navbar-brand sidebar-brand" asp-area="" asp-controller="Home" asp-action="Index">LyricSync</a>
             <ul class="nav flex-column mt-4">
                 <li class="nav-item">
@@ -21,10 +24,7 @@
                     <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="AboutUs">About us</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link text-dark" asp-area="" asp-controller="Account" asp-action="Privacy">Privacy</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link text-dark" asp-area="" asp-controller="Account" asp-action="Upload">Upload</a>
+                    <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
                 </li>
             </ul>
         </nav>

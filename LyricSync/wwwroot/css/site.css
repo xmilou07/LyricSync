@@ -41,6 +41,7 @@ body {
     top: 0;
     left: 0;
     z-index: 100;
+    transition: left 0.3s;
 }
 
 .layout-wrapper {
@@ -64,4 +65,38 @@ body {
     text-fill-color: transparent;
     display: block;
     margin-bottom: 2rem;
+}
+
+.sidebar-toggle {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 200;
+    background: #258cfb;
+    border: none;
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    color: #fff;
+    display: none;
+}
+
+@media (max-width: 767.98px) {
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 80vw;
+        min-width: 200px;
+        max-width: 320px;
+        height: 100vh;
+        z-index: 100;
+        box-shadow: 2px 0 8px rgba(0,0,0,0.15);
+    }
+    .main-content {
+        margin-left: 0;
+        padding: 1rem;
+    }
+    .sidebar-toggle {
+        display: block;
+    }
 }
