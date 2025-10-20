@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using LyricSync.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LyricSync.Controllers
@@ -26,9 +27,8 @@ namespace LyricSync.Controllers
         {
             return View();
         }
-
-        public IActionResult Upload()
-        {
+        [Authorize] // only logged in can view this page
+        public IActionResult Upload() {
             return View();
         }
 
