@@ -6,16 +6,19 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
+using LyricSync.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace LyricSync.Areas.Identity.Pages.Account.Manage
 {
+    [Authorize]
     public class PersonalDataModel : PageModel
     {
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<PersonalDataModel> _logger;
 
         public PersonalDataModel(
-            UserManager<IdentityUser> userManager,
+            UserManager<ApplicationUser> userManager,
             ILogger<PersonalDataModel> logger)
         {
             _userManager = userManager;
@@ -24,12 +27,18 @@ namespace LyricSync.Areas.Identity.Pages.Account.Manage
 
         public async Task<IActionResult> OnGet()
         {
+            _logger.LogDebug("IsAuthenticated={IsAuthenticated}", User?.Identity?.IsAuthenticated);
+            var principalUserId = _userManager.GetUserId(User);
+            _logger.LogDebug("Principal user id from claims: {UserId}", principalUserId);
+
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
             {
-                return NotFound($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
+                _logger.LogWarning("GetUserAsync returned null for principal id {UserId}", principalUserId);
+                return NotFound($"Unable to load user with ID '{principalUserId}'.");
             }
 
+            // successful: you can populate view data here
             return Page();
         }
     }
