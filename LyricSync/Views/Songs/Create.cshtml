@@ -1,0 +1,60 @@
+﻿@model LyricSync.Models.Song
+@{
+    ViewData["Title"] = "Create Song";
+}
+
+<h1 class="mb-4" style="color: #4a3aff;">Upload a Song</h1>
+
+<form asp-action="Create" method="post" enctype="multipart/form-data" class="row g-3">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="col-12">
+        <label asp-for="Title" class="form-label"></label>
+        <input asp-for="Title" class="form-control" />
+        <span asp-validation-for="Title" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="Artist" class="form-label"></label>
+        <input asp-for="Artist" class="form-control" />
+        <span asp-validation-for="Artist" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="Album" class="form-label"></label>
+        <input asp-for="Album" class="form-control" />
+        <span asp-validation-for="Album" class="text-danger"></span>
+    </div>
+
+    <div class="col-12">
+        <label asp-for="Genre" class="form-label"></label>
+        <input asp-for="Genre" class="form-control" />
+        <span asp-validation-for="Genre" class="text-danger"></span>
+    </div>
+
+    <div class="col-12">
+        <label asp-for="Lyrics" class="form-label"></label>
+        <textarea asp-for="Lyrics" class="form-control" rows="6"></textarea>
+        <span asp-validation-for="Lyrics" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label class="form-label">MP3 file (required)</label>
+        <input name="mp3File" class="form-control" type="file" accept="audio/*" required />
+        <span asp-validation-for="MP3File" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label for="lyricsFile" class="form-label">Optional lyrics file</label>
+        <input name="lyricsFile" id="lyricsFile" class="form-control" type="file" accept=".txt,.lrc,.srt" />
+    </div>
+
+    <div class="col-12">
+        <button type="submit" class="btn btn-primary">Upload Song</button>
+        <a asp-action="Index" class="btn btn-secondary ms-2">Cancel</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

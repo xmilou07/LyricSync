@@ -1,7 +1,6 @@
 ﻿using LyricSync.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Identity.Client;
 
 namespace LyricSync.Data
 {
@@ -11,6 +10,7 @@ namespace LyricSync.Data
             : base(options)
         {    }
 
-        public string Name { get; set; } = string.Empty;
+        // Songs table
+        public DbSet<Song> Song { get; set; }
     }
 }
