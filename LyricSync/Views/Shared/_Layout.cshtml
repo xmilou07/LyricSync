@@ -27,12 +27,19 @@
                     <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Upload">Upload</a>
+                    <a class="nav-link text-dark" asp-area="" asp-controller="Upload" asp-action="Index">Upload</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Manage/PersonalData">Account</a>
                 </li>
-                
+
+                <br /> <br />
+                <li class="nav-item">
+                    <a class="btn btn-primary px-4" style="background: linear-gradient(90deg, #6200ea 0%, #2196f3 100%); border: none;"
+                       href="/Identity/Account/Logout">
+                        Logout
+                    </a>
+                </li>
             </ul>
         </nav>
         <div class="container main-content">

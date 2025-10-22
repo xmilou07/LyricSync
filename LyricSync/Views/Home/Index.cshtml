@@ -1,10 +1,19 @@
-﻿@{
+﻿@using LyricSync.Models
+@inject Microsoft.AspNetCore.Identity.UserManager<ApplicationUser> UserManager
+@{
     ViewData["Title"] = "Home Page";
+
+    string displayName = null;
+    if (User?.Identity?.IsAuthenticated == true)
+    {
+        var appUser = await UserManager.GetUserAsync(User);
+        displayName = appUser?.Name ?? await UserManager.GetUserNameAsync(appUser) ?? User.Identity.Name;
+    }
 }
 
 <div class="container mt-5">
     <div class="text-center mb-4">
-        <h4><span class="text-primary fw-bold">Welcome,</span> store all your favourite music here!</h4>
+        <h4><span class="text-primary fw-bold">Welcome@(displayName != null ? ", " + displayName : "")</span> store all your favourite music here!</h4>
         <p class="text-muted">
             But first, register or login below.<br />
             By registering we can guarantee a unique and personal environment for <strong>YOUR</strong> music.

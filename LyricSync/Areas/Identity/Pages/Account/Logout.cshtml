@@ -10,7 +10,11 @@
         if (User.Identity?.IsAuthenticated ?? false)
         {
             <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/", new { area = "" })" method="post">
-                <button type="submit" class="nav-link btn btn-link text-dark">Click here to Logout</button>
+               <p>Be sure youre music is succesfully uploaded! Otherwise we won't be able to sync it for you!</p>
+               
+               <button type="submit" class="btn btn-primary px-4" style="background: linear-gradient(90deg, #6200ea 0%, #2196f3 100%); border: none;">
+                    Logout
+               </button>
             </form>
         }
         else
