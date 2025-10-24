@@ -18,10 +18,9 @@ namespace LyricSync.Models
         [Required]
         public string Album { get; set; } = string.Empty;
 
-        [Required]
         public string Lyrics { get; set; } = string.Empty;
 
-        // FilePath is set server-side after successful upload; do not require it from the client
+        // FilePath is set server-side after successful upload; do not require it from the client since it will be set during upload.
         public string FilePath { get; set; } = string.Empty;
 
         public DateTime UploadedAt { get; set; }

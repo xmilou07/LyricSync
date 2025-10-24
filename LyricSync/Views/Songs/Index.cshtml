@@ -4,74 +4,69 @@
     ViewData["Title"] = "Index";
 }
 
-<h1>Index</h1>
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h4 mb-0" style="color: #6200ea;">Your Library</h1>
+        <div class="w-100 w-sm-50 ms-0 ms-sm-3" style="max-width:420px;">
+            <input id="searchInput" class="form-control" type="search" placeholder="Search library..." aria-label="Search" />
+        </div>
+    </div>
 
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Title)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Artist)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Album)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Lyrics)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.FilePath)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.UploadedAt)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.UploadedById)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Genre)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.Title)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Artist)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Album)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Lyrics)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.FilePath)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.UploadedAt)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.UploadedById)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Genre)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
-            </td>
-        </tr>
+    <div class="row g-3">
+        @foreach (var item in Model)
+        {
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title mb-1 text-truncate">@item.Title</h5>
+                        <p class="card-text mb-1"><small class="text-muted">Artist:</small> @item.Artist</p>
+                        <p class="card-text mb-1"><small class="text-muted">Album:</small> @item.Album</p>
+                        <p class="card-text mb-2"><small class="text-muted">Genre:</small> @item.Genre</p>
+
+                        @if (!string.IsNullOrWhiteSpace(item.FilePath))
+                        {
+                            <audio controls preload="none" class="w-100 mb-2" style="max-height:48px;">
+                                <source src="@item.FilePath" />
+                                Your browser does not support the audio element.
+                            </audio>
+                        }
+                        else
+                        {
+                            <p class="text-muted small mb-2">No audio file available</p>
+                        }
+
+                        <div class="mt-auto d-flex flex-wrap gap-2">
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">Details</a>
+                            <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="m-0">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this song?');">Delete</button>
+                            </form>
+                            <a class="btn btn-sm btn-outline-dark">Listen Aesthetically 🎶</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // client-side search/filter
+        (function () {
+            const input = document.getElementById('searchInput');
+            if (!input) return;
+            input.addEventListener('input', function () {
+                const q = this.value.trim().toLowerCase();
+                const cards = document.querySelectorAll('.card .card-body');
+                cards.forEach(cb => {
+                    const title = (cb.querySelector('.card-title')?.textContent || '').toLowerCase();
+                    const artist = (cb.querySelector('.card-text')?.textContent || '').toLowerCase();
+                    const container = cb.closest('.col-12');
+                    const visible = q === '' || title.includes(q) || artist.includes(q);
+                    if (container) container.style.display = visible ? '' : 'none';
+                });
+            });
+        })();
+    </script>
 }
-    </tbody>
-</table>

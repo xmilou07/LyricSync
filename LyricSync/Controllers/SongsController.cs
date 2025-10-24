@@ -7,10 +7,12 @@ using Microsoft.EntityFrameworkCore;
 using LyricSync.Data;
 using LyricSync.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 
 namespace LyricSync.Controllers
 {
+    [Authorize] // Require authenticated users for all actions in this controller
     public class SongsController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -57,11 +59,10 @@ namespace LyricSync.Controllers
         // POST: Songs/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize]
         public async Task<IActionResult> Create([Bind("Title,Artist,Album,Lyrics,Genre,UploadedById")] Song song, IFormFile mp3File, IFormFile lyricsFile)
         {
             _logger.LogDebug("Create POST for Title='{Title}'", song?.Title);
-
-            
 
             try
             {
@@ -136,6 +137,7 @@ namespace LyricSync.Controllers
         }
 
         // GET: Songs/Edit/5
+        [Authorize]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -156,6 +158,7 @@ namespace LyricSync.Controllers
         // POST: Songs/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize]
         public async Task<IActionResult> Edit(int id, [Bind("Id,Title,Artist,Album,Lyrics,FilePath,UploadedAt,UploadedById,Genre")] Song song)
         {
             if (id != song.Id)
@@ -195,6 +198,7 @@ namespace LyricSync.Controllers
         }
 
         // GET: Songs/Delete/5
+        [Authorize]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -216,6 +220,7 @@ namespace LyricSync.Controllers
         // POST: Songs/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
+        [Authorize]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var song = await _context.Song.FindAsync(id);
