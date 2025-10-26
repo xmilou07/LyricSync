@@ -4,7 +4,32 @@
 @{
     var hasExternalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).Any();
 }
-<ul class="nav nav-pills flex-column">
+<style>
+    .manage-nav .nav-link {
+        color: #4a3aff !important;
+        background: transparent !important;
+        border: none !important;
+        margin-bottom: .25rem;
+        transition: transform .08s ease, opacity .12s ease, background .12s ease;
+    }
+
+    .manage-nav .nav-link:hover {
+        text-decoration: none;
+        opacity: 0.9;
+    }
+
+    .manage-nav .nav-link.active {
+        color: #fff !important;
+        background: linear-gradient(90deg, #6200ea 0%, #2196f3 100%) !important;
+        border: none !important;
+        font-weight: 600;
+        box-shadow: 0 2px 6px rgba(33, 150, 243, 0.12);
+    }
+
+    .manage-nav .nav-item { margin: 4px 0; padding: 0; }
+</style>
+
+<ul class="nav nav-pills flex-column manage-nav">
     <li class="nav-item"><a class="nav-link @ManageNavPages.IndexNavClass(ViewContext)" id="profile" asp-page="./Index">Profile</a></li>
     <li class="nav-item"><a class="nav-link @ManageNavPages.EmailNavClass(ViewContext)" id="email" asp-page="./Email">Email</a></li>
     <li class="nav-item"><a class="nav-link @ManageNavPages.ChangePasswordNavClass(ViewContext)" id="change-password" asp-page="./ChangePassword">Password</a></li>

@@ -6,7 +6,7 @@
 
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="h4 mb-0" style="color: #6200ea;">Your Library</h1>
+        <h1 class="h4 mb-0" style="color: #4a3aff;">Your Library</h1>
         <div class="w-100 w-sm-50 ms-0 ms-sm-3" style="max-width:420px;">
             <input id="searchInput" class="form-control" type="search" placeholder="Search library..." aria-label="Search" />
         </div>
@@ -38,9 +38,7 @@
                         <div class="mt-auto d-flex flex-wrap gap-2">
                             <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">Edit</a>
                             <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">Details</a>
-                            <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="m-0">
-                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this song?');">Delete</button>
-                            </form>
+                            <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger">Delete</a>
                             <a class="btn btn-sm btn-outline-dark">Listen Aesthetically 🎶</a>
                         </div>
                     </div>
