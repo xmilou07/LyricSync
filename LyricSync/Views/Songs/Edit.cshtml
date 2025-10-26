@@ -1,4 +1,26 @@
-﻿@model LyricSync.Models.Song
+﻿@* 
+PSEUDOCODE / PLAN (detailed):
+1. Ensure the edit form can upload files: set method="post" and enctype="multipart/form-data".
+2. Preserve the existing file path stored in the DB so the server can keep it if no new file is uploaded:
+   - Render a hidden input named "ExistingFilePath" with the current Model.FilePath.
+3. Show the currently stored file to the user (so it appears "selected"):
+   - If Model.FilePath is not empty:
+     - Display the filename (System.IO.Path.GetFileName).
+     - Render a download link to the stored path using Url.Content.
+     - If the file is an audio file (.mp3), render an <audio controls> element to allow preview.
+4. Keep the file input for replacing the file:
+   - Use the same name as the model property (asp-for="FilePath") so existing binding logic on the server is preserved.
+   - Accept only .mp3 files (accept=".mp3").
+5. Add a hidden input to preserve the existing path on postback named "ExistingFilePath".
+6. Leave other form fields unchanged.
+7. Include validation scripts as before.
+
+IMPLEMENTATION NOTES:
+- File inputs cannot be prefilled for security; showing the current file via link/audio provides the UX of "selected".
+- The controller should check "ExistingFilePath" if no new file is uploaded.
+*@
+
+@model LyricSync.Models.Song
 
 @{
     ViewData["Title"] = "Edit";
@@ -8,9 +30,10 @@
 
 <div class="row">
     <div class="col-md-4">
-        <form asp-action="Edit">
+        <form asp-action="Edit" method="post" enctype="multipart/form-data">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             <input type="hidden" asp-for="Id" />
+
             <div class="form-group">
                 <label asp-for="Title" class="control-label"></label>
                 <input asp-for="Title" class="form-control" />
@@ -26,16 +49,46 @@
                 <input asp-for="Album" class="form-control" />
                 <span asp-validation-for="Album" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="form-group w-200 h-200">
                 <label asp-for="Lyrics" class="control-label"></label>
                 <input asp-for="Lyrics" class="form-control" />
                 <span asp-validation-for="Lyrics" class="text-danger"></span>
             </div>
+
             <div class="form-group">
-                <label asp-for="FilePath" class="control-label"></label>
-                <input asp-for="FilePath" class="form-control" />
-                <span asp-validation-for="FilePath" class="text-danger"></span>
+                <label asp-for="MP3File" class="control-label"></label>
+
+                @* Show current stored file info (file path is stored in DB) *@
+                @if (!string.IsNullOrEmpty(Model?.MP3File))
+                {
+                    var fileName = System.IO.Path.GetFileName(Model.MP3File);
+                    <div class="mb-2">
+                        <strong>Current file:</strong>
+                        <div>@fileName</div>
+                        <div>
+                            <a href="@Url.Content(Model.MP3File)" target="_blank" rel="noopener">Download current file</a>
+                        </div>
+                        @* If it's an mp3, provide an audio preview *@
+                        @if (Model.MP3File.EndsWith(".mp3", System.StringComparison.OrdinalIgnoreCase))
+                        {
+                            <div class="mt-2">
+                                <audio controls style="width:100%;">
+                                    <source src="@Url.Content(Model.MP3File)" type="audio/mpeg" />
+                                    Your browser does not support the audio element.
+                                </audio>
+                            </div>
+                        }
+                    </div>
+                }
+
+                @* Preserve existing path so server can use it if no new file is uploaded *@
+                <input type="hidden" name="ExistingFilePath" value="@(Model?.MP3File ?? string.Empty)" />
+
+                @* File input to allow replacing the existing file. Keeping asp-for so existing model binding remains consistent. *@
+                <input asp-for="MP3File" class="form-control" type="file" accept=".mp3" />
+                <span asp-validation-for="MP3File" class="text-danger"></span>
             </div>
+
             <div class="form-group">
                 <label asp-for="UploadedAt" class="control-label"></label>
                 <input asp-for="UploadedAt" class="form-control" />

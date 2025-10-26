@@ -7,12 +7,11 @@ using Microsoft.EntityFrameworkCore;
 using LyricSync.Data;
 using LyricSync.Models;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Authorization;
 
 namespace LyricSync.Controllers
 {
-    [Authorize] // Require authenticated users for all actions in this controller
     public class SongsController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -25,6 +24,7 @@ namespace LyricSync.Controllers
         }
 
         // GET: Songs
+        [Authorize]
         public async Task<IActionResult> Index()
         {
             _logger.LogDebug("Loading songs index");
@@ -51,18 +51,23 @@ namespace LyricSync.Controllers
         }
 
         // GET: Songs/Create
-        public IActionResult Create()
-        {
-            return View();
-        }
+        [Authorize]
+        public IActionResult Create() => View();
 
         // POST: Songs/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
-        public async Task<IActionResult> Create([Bind("Title,Artist,Album,Lyrics,Genre,UploadedById")] Song song, IFormFile mp3File, IFormFile lyricsFile)
+        public async Task<IActionResult> Create([Bind("Title,Artist,Album,Lyrics,Genre,UploadedById")] Song song, IFormFile? mp3File, IFormFile? lyricsFile)
         {
             _logger.LogDebug("Create POST for Title='{Title}'", song?.Title);
+
+            // Validate client-side fields first
+            if (!ModelState.IsValid)
+            {
+                _logger.LogWarning("ModelState invalid before file handling");
+                return View(song);
+            }
 
             try
             {
@@ -89,17 +94,18 @@ namespace LyricSync.Controllers
                 Directory.CreateDirectory(musicFolder);
                 Directory.CreateDirectory(lyricsFolder);
 
-                // Save MP3
+                // Save MP3 and set DB field MP3File
                 var mp3FileName = $"{Guid.NewGuid()}{Path.GetExtension(mp3File.FileName)}";
                 var mp3Path = Path.Combine(musicFolder, mp3FileName);
                 await using (var stream = new FileStream(mp3Path, FileMode.Create))
                 {
                     await mp3File.CopyToAsync(stream);
                 }
-                song.FilePath = $"/uploads/music/{mp3FileName}";
-                _logger.LogInformation("Saved MP3 to {Path}", song.FilePath);
 
-                // Save lyrics file if provided
+                song.MP3File = $"/uploads/music/{mp3FileName}";
+                _logger.LogInformation("Saved MP3 to {Path}", song.MP3File);
+
+                // Save optional lyrics file
                 if (lyricsFile != null && lyricsFile.Length > 0)
                 {
                     var lyricsFileName = $"{Guid.NewGuid()}{Path.GetExtension(lyricsFile.FileName)}";
@@ -117,7 +123,19 @@ namespace LyricSync.Controllers
                 }
 
                 song.UploadedAt = DateTime.UtcNow;
-                song.UploadedById = song.UploadedById; // preserve if provided, otherwise 0
+                // If you have a signed-in user, set UploadedById from user id here
+               // song.UploadedById = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)); 
+
+                // Now that server-only field MP3File is set, revalidate the full model
+                ModelState.Clear();
+                if (!TryValidateModel(song))
+                {
+                    var errors = ModelState
+                        .Where(kv => kv.Value.Errors.Count > 0)
+                        .Select(kv => $"{kv.Key}: {string.Join(", ", kv.Value.Errors.Select(e => e.ErrorMessage))}");
+                    _logger.LogWarning("Model invalid after file handling: {Errors}", string.Join(" | ", errors));
+                    return View(song);
+                }
 
                 _context.Song.Add(song);
                 await _context.SaveChangesAsync();
@@ -146,7 +164,7 @@ namespace LyricSync.Controllers
                 return NotFound();
             }
 
-            var song = await _context.Song.FindAsync(id);
+            var song = await _context.Song  .FindAsync(id);
             if (song == null)
             {
                 _logger.LogWarning("Edit not found for id {Id}", id);
@@ -159,7 +177,7 @@ namespace LyricSync.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Title,Artist,Album,Lyrics,FilePath,UploadedAt,UploadedById,Genre")] Song song)
+        public async Task<IActionResult> Edit(int id, Song song, IFormFile? MP3File, string? ExistingFilePath)
         {
             if (id != song.Id)
             {
@@ -167,10 +185,28 @@ namespace LyricSync.Controllers
                 return NotFound();
             }
 
-            if (ModelState.IsValid)
+           
+            try
             {
-                try
+                if (MP3File != null && MP3File.Length > 0)
                 {
+                    var uploadsRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+                    var musicFolder = Path.Combine(uploadsRoot, "music");
+                    Directory.CreateDirectory(musicFolder);
+                    var mp3FileName = $"{Guid.NewGuid()}{Path.GetExtension(MP3File.FileName)}";
+                    var mp3Path = Path.Combine(musicFolder, mp3FileName);
+                    await using (var stream = new FileStream(mp3Path, FileMode.Create))
+                    {
+                        await MP3File.CopyToAsync(stream);
+                    }
+                    song.MP3File = $"/uploads/music/{mp3FileName}";
+                    _logger.LogInformation("Updated MP3 file for song {Id}", song.Id);
+                }
+                else
+                {
+                    song.MP3File = ExistingFilePath ?? song.MP3File;
+                }
+
                     _context.Update(song);
                     await _context.SaveChangesAsync();
                     _logger.LogInformation("Song {Id} updated", song.Id);
@@ -190,12 +226,7 @@ namespace LyricSync.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            var errors = ModelState
-                .Where(kv => kv.Value.Errors.Count > 0)
-                .Select(kv => $"{kv.Key}: {string.Join(", ", kv.Value.Errors.Select(e => e.ErrorMessage))}");
-            _logger.LogWarning("ModelState invalid: {Errors}", string.Join(" | ", errors));
-            return View(song);
-        }
+         
 
         // GET: Songs/Delete/5
         [Authorize]
@@ -218,9 +249,9 @@ namespace LyricSync.Controllers
         }
 
         // POST: Songs/Delete/5
+        [Authorize]
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        [Authorize]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var song = await _context.Song.FindAsync(id);

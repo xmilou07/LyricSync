@@ -12,5 +12,8 @@ namespace LyricSync.Data
 
         // Songs table
         public DbSet<Song> Song { get; set; }
+
+        // Lyrics table
+        // public DbSet<Lyric> Lyric { get; set; }
     }
 }

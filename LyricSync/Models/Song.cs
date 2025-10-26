@@ -18,10 +18,11 @@ namespace LyricSync.Models
         [Required]
         public string Album { get; set; } = string.Empty;
 
+        [Required]
         public string Lyrics { get; set; } = string.Empty;
 
-        // FilePath is set server-side after successful upload; do not require it from the client since it will be set during upload.
-        public string FilePath { get; set; } = string.Empty;
+        [Required]
+        public string MP3File { get; set; } = string.Empty;
 
         public DateTime UploadedAt { get; set; }
 
@@ -30,9 +31,7 @@ namespace LyricSync.Models
         [Required]
         public string Genre { get; set; } = string.Empty;
 
-        // NotMapped file used for uploads in the create form
         [NotMapped]
-        [Required(ErrorMessage = "Please upload an MP3 file.")]
-        public IFormFile MP3File { get; set; }
+        public IFormFile? MP3Upload { get; set; }
     }
 }

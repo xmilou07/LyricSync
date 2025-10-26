@@ -1,4 +1,5 @@
 ﻿@model LyricSync.Models.Song
+
 @{
     ViewData["Title"] = "Create Song";
 }
@@ -40,8 +41,8 @@
 
     <div class="col-md-6">
         <label class="form-label">MP3 file (required)</label>
-        <input name="mp3File" class="form-control" type="file" accept="audio/*" required placeholder="myfaovietesong.mp3" />
-        <span asp-validation-for="MP3File" class="text-danger"></span>
+        <input name="mp3File" class="form-control" type="file" accept="audio/*" required placeholder="myfavouritesong.mp3" />
+        <span asp-validation-for="MP3Upload" class="text-danger"></span>
     </div>
 
     <div class="col-md-6">
