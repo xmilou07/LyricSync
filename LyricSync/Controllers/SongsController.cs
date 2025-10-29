@@ -28,7 +28,7 @@ namespace LyricSync.Controllers
         public async Task<IActionResult> Index()
         {
             _logger.LogDebug("Loading songs index");
-            return View(await _context.Song.ToListAsync());
+            return View(await _context.Song.Include(s => s.Lyric).ToListAsync());
         }
 
         // GET: Songs/Details/5
@@ -105,7 +105,8 @@ namespace LyricSync.Controllers
                 song.MP3File = $"/uploads/music/{mp3FileName}";
                 _logger.LogInformation("Saved MP3 to {Path}", song.MP3File);
 
-                // Save optional lyrics file
+                // Save optional lyrics file to disk and read its content
+                string? lyricsContentFromFile = null;
                 if (lyricsFile != null && lyricsFile.Length > 0)
                 {
                     var lyricsFileName = $"{Guid.NewGuid()}{Path.GetExtension(lyricsFile.FileName)}";
@@ -115,11 +116,12 @@ namespace LyricSync.Controllers
                         await lyricsFile.CopyToAsync(stream);
                     }
 
-                    song.Lyrics = string.IsNullOrWhiteSpace(song.Lyrics)
-                        ? $"/uploads/lyrics/{lyricsFileName}"
-                        : song.Lyrics + "\n" + $"/uploads/lyrics/{lyricsFileName}";
+                    _logger.LogInformation("Saved lyrics file to {Path}", $"/uploads/lyrics/{lyricsFileName}");
 
-                    _logger.LogInformation("Saved lyrics to {Path}", $"/uploads/lyrics/{lyricsFileName}");
+                    // read uploaded lyrics text
+                    lyricsFile.OpenReadStream().Position = 0;
+                    using var reader = new StreamReader(lyricsFile.OpenReadStream());
+                    lyricsContentFromFile = await reader.ReadToEndAsync();
                 }
 
                 song.UploadedAt = DateTime.UtcNow;
@@ -139,6 +141,19 @@ namespace LyricSync.Controllers
 
                 _context.Song.Add(song);
                 await _context.SaveChangesAsync();
+
+                // After saving song, persist lyrics (from textarea or lyrics file) to Lyric table
+                var contentToStore = (lyricsContentFromFile ?? song.Lyrics)?.Trim();
+                if (!string.IsNullOrWhiteSpace(contentToStore))
+                {
+                    var lyric = new Lyric
+                    {
+                        Content = contentToStore
+                    };
+                    _context.Lyric.Add(lyric);
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("Stored lyrics for song {SongId} in Lyric table", song.Id);
+                }
 
                 _logger.LogInformation("Song saved to database with id {Id}", song.Id);
                 return RedirectToAction(nameof(Index));

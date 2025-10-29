@@ -91,6 +91,23 @@ namespace LyricSync.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("LyricSync.Models.Lyric", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Lyric", (string)null);
+                });
+
             modelBuilder.Entity("LyricSync.Models.Song", b =>
                 {
                     b.Property<int>("Id")
@@ -131,7 +148,7 @@ namespace LyricSync.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Song");
+                    b.ToTable("Song", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>

@@ -14,6 +14,16 @@ namespace LyricSync.Data
         public DbSet<Song> Song { get; set; }
 
         // Lyrics table
-        // public DbSet<Lyric> Lyric { get; set; }
+        public DbSet<Lyric> Lyric { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<Song>()
+                .HasOne(s => s.Lyric)
+                .WithOne(l => l.Song)
+                .HasForeignKey<Lyric>(l => l.Id);
+        }
     }
 }

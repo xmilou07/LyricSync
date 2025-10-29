@@ -18,7 +18,8 @@ namespace LyricSync.Models
         [Required]
         public string Album { get; set; } = string.Empty;
 
-        [Required]
+        // keep this for form binding; lyrics will be stored in the Lyric table
+        [NotMapped]
         public string Lyrics { get; set; } = string.Empty;
 
         [Required]
@@ -33,5 +34,8 @@ namespace LyricSync.Models
 
         [NotMapped]
         public IFormFile? MP3Upload { get; set; }
+
+        // navigation property for the one-to-one relationship to Lyric
+        public Lyric? Lyric { get; set; }
     }
 }
