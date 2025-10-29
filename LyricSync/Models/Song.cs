@@ -35,6 +35,9 @@ namespace LyricSync.Models
         [NotMapped]
         public IFormFile? MP3Upload { get; set; }
 
+        // foreign key to Lyric.Id (nullable so songs can exist without lyrics)
+        public int? LyricsId { get; set; }
+
         // navigation property for the one-to-one relationship to Lyric
         public Lyric? Lyric { get; set; }
     }

@@ -10,6 +10,8 @@ namespace LyricSync.Models
         [Required]
         public string Content { get; set; } = string.Empty;
 
+
+        // navigation back to Song
         public Song? Song { get; set; }
     }
 }

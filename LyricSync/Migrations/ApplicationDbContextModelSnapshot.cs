@@ -105,7 +105,7 @@ namespace LyricSync.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Lyric", (string)null);
+                    b.ToTable("Lyric");
                 });
 
             modelBuilder.Entity("LyricSync.Models.Song", b =>
@@ -128,9 +128,8 @@ namespace LyricSync.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Lyrics")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int?>("LyricsId")
+                        .HasColumnType("int");
 
                     b.Property<string>("MP3File")
                         .IsRequired()
@@ -148,7 +147,11 @@ namespace LyricSync.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Song", (string)null);
+                    b.HasIndex("LyricsId")
+                        .IsUnique()
+                        .HasFilter("[LyricsId] IS NOT NULL");
+
+                    b.ToTable("Song");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -288,6 +291,15 @@ namespace LyricSync.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("LyricSync.Models.Song", b =>
+                {
+                    b.HasOne("LyricSync.Models.Lyric", "Lyric")
+                        .WithOne("Song")
+                        .HasForeignKey("LyricSync.Models.Song", "LyricsId");
+
+                    b.Navigation("Lyric");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -337,6 +349,11 @@ namespace LyricSync.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("LyricSync.Models.Lyric", b =>
+                {
+                    b.Navigation("Song");
                 });
 #pragma warning restore 612, 618
         }

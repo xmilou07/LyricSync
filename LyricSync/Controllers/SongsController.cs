@@ -9,6 +9,7 @@ using LyricSync.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace LyricSync.Controllers
 {
@@ -61,13 +62,6 @@ namespace LyricSync.Controllers
         public async Task<IActionResult> Create([Bind("Title,Artist,Album,Lyrics,Genre,UploadedById")] Song song, IFormFile? mp3File, IFormFile? lyricsFile)
         {
             _logger.LogDebug("Create POST for Title='{Title}'", song?.Title);
-
-            // Validate client-side fields first
-            if (!ModelState.IsValid)
-            {
-                _logger.LogWarning("ModelState invalid before file handling");
-                return View(song);
-            }
 
             try
             {
@@ -125,8 +119,7 @@ namespace LyricSync.Controllers
                 }
 
                 song.UploadedAt = DateTime.UtcNow;
-                // If you have a signed-in user, set UploadedById from user id here
-               // song.UploadedById = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)); 
+                // song.UploadedById = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)); 
 
                 // Now that server-only field MP3File is set, revalidate the full model
                 ModelState.Clear();
@@ -152,6 +145,12 @@ namespace LyricSync.Controllers
                     };
                     _context.Lyric.Add(lyric);
                     await _context.SaveChangesAsync();
+
+                    // link the saved lyric to the previously saved song (Song.LyricsId -> Lyric.Id)
+                    song.LyricsId = lyric.Id;
+                    _context.Song.Update(song);
+                    await _context.SaveChangesAsync();
+
                     _logger.LogInformation("Stored lyrics for song {SongId} in Lyric table", song.Id);
                 }
 

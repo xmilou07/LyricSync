@@ -20,10 +20,15 @@ namespace LyricSync.Data
         {
             base.OnModelCreating(modelBuilder);
 
+            // Configure one-to-one where Song has the foreign key LyricsId -> Lyric.Id
             modelBuilder.Entity<Song>()
                 .HasOne(s => s.Lyric)
                 .WithOne(l => l.Song)
-                .HasForeignKey<Lyric>(l => l.Id);
+                .HasForeignKey<Song>(s => s.LyricsId);
+
+            modelBuilder.Entity<Song>()
+                .Property(s => s.LyricsId)
+                .IsRequired(false);
         }
     }
 }
