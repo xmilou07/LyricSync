@@ -41,10 +41,37 @@ namespace LyricSync.Controllers
                 return NotFound();
             }
 
-            var song = await _context.Song.FirstOrDefaultAsync(m => m.Id == id);
+            // include the Lyric navigation so we can show or link to the stored lyric
+            var song = await _context.Song.Include(s => s.Lyric).FirstOrDefaultAsync(m => m.Id == id);
             if (song == null)
             {
                 _logger.LogWarning("Details not found for id {Id}", id);
+                return NotFound();
+            }
+
+            return View(song);
+        }
+
+        // GET: Songs/Lyrics/5
+        public async Task<IActionResult> Lyrics(int? id)
+        {
+            if (id == null)
+            {
+                _logger.LogWarning("Lyrics called with null id");
+                return NotFound();
+            }
+
+            var song = await _context.Song.Include(s => s.Lyric).FirstOrDefaultAsync(s => s.Id == id);
+            if (song == null)
+            {
+                _logger.LogWarning("Lyrics not found for id {Id}", id);
+                return NotFound();
+            }
+
+            // If there is no stored Lyric and no inline Lyrics text, show NotFound to keep behavior simple
+            if (song.Lyric == null && string.IsNullOrWhiteSpace(song.Lyrics))
+            {
+                _logger.LogInformation("No lyrics available for song {Id}", id);
                 return NotFound();
             }
 
@@ -178,12 +205,17 @@ namespace LyricSync.Controllers
                 return NotFound();
             }
 
-            var song = await _context.Song  .FindAsync(id);
+            // include Lyric so the view can display and edit the stored lyrics
+            var song = await _context.Song.Include(s => s.Lyric).FirstOrDefaultAsync(s => s.Id == id);
             if (song == null)
             {
                 _logger.LogWarning("Edit not found for id {Id}", id);
                 return NotFound();
             }
+
+            // populate the NotMapped Lyrics property so the textarea shows existing lyric content
+            song.Lyrics = song.Lyric?.Content ?? string.Empty;
+
             return View(song);
         }
 
@@ -191,7 +223,7 @@ namespace LyricSync.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
-        public async Task<IActionResult> Edit(int id, Song song, IFormFile? MP3File, string? ExistingFilePath)
+        public async Task<IActionResult> Edit(int id, Song song, IFormFile? MP3File, string? ExistingFilePath, bool removeLyric)
         {
             if (id != song.Id)
             {
@@ -199,9 +231,17 @@ namespace LyricSync.Controllers
                 return NotFound();
             }
 
-           
             try
             {
+                // load the existing entity including Lyric so we can update relationships safely
+                var existingSong = await _context.Song.Include(s => s.Lyric).FirstOrDefaultAsync(s => s.Id == id);
+                if (existingSong == null)
+                {
+                    _logger.LogWarning("Edit not found for id {Id}", id);
+                    return NotFound();
+                }
+
+                // handle MP3 replacement
                 if (MP3File != null && MP3File.Length > 0)
                 {
                     var uploadsRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
@@ -213,34 +253,63 @@ namespace LyricSync.Controllers
                     {
                         await MP3File.CopyToAsync(stream);
                     }
-                    song.MP3File = $"/uploads/music/{mp3FileName}";
-                    _logger.LogInformation("Updated MP3 file for song {Id}", song.Id);
+                    existingSong.MP3File = $"/uploads/music/{mp3FileName}";
+                    _logger.LogInformation("Updated MP3 file for song {Id}", existingSong.Id);
                 }
                 else
                 {
-                    song.MP3File = ExistingFilePath ?? song.MP3File;
+                    existingSong.MP3File = ExistingFilePath ?? existingSong.MP3File;
                 }
 
-                    _context.Update(song);
-                    await _context.SaveChangesAsync();
-                    _logger.LogInformation("Song {Id} updated", song.Id);
-                }
-                catch (DbUpdateConcurrencyException)
+                // update scalar properties from the posted model
+                existingSong.Title = song.Title;
+                existingSong.Artist = song.Artist;
+                existingSong.Album = song.Album;
+                existingSong.Genre = song.Genre;
+                existingSong.UploadedAt = song.UploadedAt != default ? song.UploadedAt : existingSong.UploadedAt;
+                existingSong.UploadedById = song.UploadedById != 0 ? song.UploadedById : existingSong.UploadedById;
+
+                // handle lyrics: update existing Lyric or create a new one if needed
+                var incomingLyrics = song.Lyrics?.Trim();
+
+                if (removeLyric == true)
                 {
-                    if (!SongExists(song.Id))
+                    if (existingSong.Lyric != null)
                     {
-                        _logger.LogWarning("Edit concurrency: song {Id} not found", song.Id);
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
+                        _context.Lyric.Remove(existingSong.Lyric);
+                        existingSong.Lyric = null;
+                        existingSong.LyricsId = null;
                     }
                 }
-                return RedirectToAction(nameof(Index));
+                else if (existingSong.Lyric != null)
+                {
+                    existingSong.Lyric.Content = incomingLyrics ?? string.Empty;
+                }
+                else if (!string.IsNullOrWhiteSpace(incomingLyrics))
+                {
+                    existingSong.Lyric = new Lyric { Content = incomingLyrics };
+                }
+
+                // save all changes in one transaction
+                _context.Update(existingSong);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Song {Id} updated", existingSong.Id);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!SongExists(song.Id))
+                {
+                    _logger.LogWarning("Edit concurrency: song {Id} not found", song.Id);
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
             }
 
-         
+            return RedirectToAction(nameof(Index));
+        }
 
         // GET: Songs/Delete/5
         [Authorize]

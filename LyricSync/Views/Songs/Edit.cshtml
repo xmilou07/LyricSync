@@ -1,26 +1,4 @@
-﻿@* 
-PSEUDOCODE / PLAN (detailed):
-1. Ensure the edit form can upload files: set method="post" and enctype="multipart/form-data".
-2. Preserve the existing file path stored in the DB so the server can keep it if no new file is uploaded:
-   - Render a hidden input named "ExistingFilePath" with the current Model.FilePath.
-3. Show the currently stored file to the user (so it appears "selected"):
-   - If Model.FilePath is not empty:
-     - Display the filename (System.IO.Path.GetFileName).
-     - Render a download link to the stored path using Url.Content.
-     - If the file is an audio file (.mp3), render an <audio controls> element to allow preview.
-4. Keep the file input for replacing the file:
-   - Use the same name as the model property (asp-for="FilePath") so existing binding logic on the server is preserved.
-   - Accept only .mp3 files (accept=".mp3").
-5. Add a hidden input to preserve the existing path on postback named "ExistingFilePath".
-6. Leave other form fields unchanged.
-7. Include validation scripts as before.
-
-IMPLEMENTATION NOTES:
-- File inputs cannot be prefilled for security; showing the current file via link/audio provides the UX of "selected".
-- The controller should check "ExistingFilePath" if no new file is uploaded.
-*@
-
-@model LyricSync.Models.Song
+﻿@model LyricSync.Models.Song
 
 @{
     ViewData["Title"] = "Edit";
@@ -28,92 +6,108 @@ IMPLEMENTATION NOTES:
 
 <h1 style="color: #4a3aff;">Edit</h1>
 
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Edit" method="post" enctype="multipart/form-data">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <input type="hidden" asp-for="Id" />
+<form asp-action="Edit" method="post" enctype="multipart/form-data" class="row g-4">
+    <input type="hidden" asp-for="Id" />
 
-            <div class="form-group">
-                <label asp-for="Title" class="control-label"></label>
-                <input asp-for="Title" class="form-control" />
-                <span asp-validation-for="Title" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Artist" class="control-label"></label>
-                <input asp-for="Artist" class="form-control" />
-                <span asp-validation-for="Artist" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Album" class="control-label"></label>
-                <input asp-for="Album" class="form-control" />
-                <span asp-validation-for="Album" class="text-danger"></span>
-            </div>
-            <div class="form-group w-200 h-200">
-                <label asp-for="Lyrics" class="control-label"></label>
-                <input asp-for="Lyrics" class="form-control" />
-                <span asp-validation-for="Lyrics" class="text-danger"></span>
-            </div>
+    <div class="col-md-6">
+        <label asp-for="Title" class="form-label"></label>
+        <input asp-for="Title" class="form-control" />
+        <span asp-validation-for="Title" class="text-danger"></span>
+    </div>
 
-            <div class="form-group">
-                <label asp-for="MP3File" class="control-label"></label>
+    <div class="col-md-6">
+        <label asp-for="Artist" class="form-label"></label>
+        <input asp-for="Artist" class="form-control" />
+        <span asp-validation-for="Artist" class="text-danger"></span>
+    </div>
 
-                @* Show current stored file info (file path is stored in DB) *@
-                @if (!string.IsNullOrEmpty(Model?.MP3File))
+    <div class="col-md-6">
+        <label asp-for="Album" class="form-label"></label>
+        <input asp-for="Album" class="form-control" />
+        <span asp-validation-for="Album" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="Genre" class="form-label"></label>
+        <input asp-for="Genre" class="form-control" />
+        <span asp-validation-for="Genre" class="text-danger"></span>
+    </div>
+
+    <div class="col-12">
+        <label asp-for="Lyrics" class="form-label"></label>
+        <textarea asp-for="Lyrics" class="form-control" rows="8" placeholder="Edit or paste lyrics here..."></textarea>
+        <span asp-validation-for="Lyrics" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label class="form-label">MP3 file</label>
+
+        @if (!string.IsNullOrEmpty(Model?.MP3File))
+        {
+            var fileName = System.IO.Path.GetFileName(Model.MP3File);
+            <div class="mb-2">
+                <strong>Current file:</strong>
+                <div>@fileName</div>
+                <div>
+                    <a href="@Url.Content(Model.MP3File)" target="_blank" rel="noopener">Download current file</a>
+                </div>
+                @if (Model.MP3File.EndsWith(".mp3", System.StringComparison.OrdinalIgnoreCase))
                 {
-                    var fileName = System.IO.Path.GetFileName(Model.MP3File);
-                    <div class="mb-2">
-                        <strong>Current file:</strong>
-                        <div>@fileName</div>
-                        <div>
-                            <a href="@Url.Content(Model.MP3File)" target="_blank" rel="noopener">Download current file</a>
-                        </div>
-                        @* If it's an mp3, provide an audio preview *@
-                        @if (Model.MP3File.EndsWith(".mp3", System.StringComparison.OrdinalIgnoreCase))
-                        {
-                            <div class="mt-2">
-                                <audio controls style="width:100%;">
-                                    <source src="@Url.Content(Model.MP3File)" type="audio/mpeg" />
-                                    Your browser does not support the audio element.
-                                </audio>
-                            </div>
-                        }
+                    <div class="mt-2">
+                        <audio controls style="width:100%;">
+                            <source src="@Url.Content(Model.MP3File)" type="audio/mpeg" />
+                            Your browser does not support the audio element.
+                        </audio>
                     </div>
                 }
+            </div>
+        }
 
-                @* Preserve existing path so server can use it if no new file is uploaded *@
-                <input type="hidden" name="ExistingFilePath" value="@(Model?.MP3File ?? string.Empty)" />
-
-                @* File input to allow replacing the existing file. Keeping asp-for so existing model binding remains consistent. *@
-                <input asp-for="MP3File" class="form-control" type="file" accept=".mp3" />
-                <span asp-validation-for="MP3File" class="text-danger"></span>
-            </div>
-
-            <div class="form-group">
-                <label asp-for="UploadedAt" class="control-label"></label>
-                <input asp-for="UploadedAt" class="form-control" />
-                <span asp-validation-for="UploadedAt" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="UploadedById" class="control-label"></label>
-                <input asp-for="UploadedById" class="form-control" />
-                <span asp-validation-for="UploadedById" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Genre" class="control-label"></label>
-                <input asp-for="Genre" class="form-control" />
-                <span asp-validation-for="Genre" class="text-danger"></span>
-            </div>
-            <div class="form-group mt-4">
-                <input type="submit" value="Save" class="btn btn-outline-primary" />
-            </div>
-        </form>
+        <input type="hidden" name="ExistingFilePath" value="@(Model?.MP3File ?? string.Empty)" />
+        <input asp-for="MP3File" class="form-control" type="file" accept="audio/*" />
+        <span asp-validation-for="MP3File" class="text-danger"></span>
     </div>
-</div>
 
-<div class="mt-5">
-    <a asp-action="Index">Back To List</a>
-</div>
+    <div class="col-md-6">
+        <label class="form-label">Stored lyrics preview</label>
+        <div class="border rounded p-2" style="min-height:160px; background:#f8f9fa;">
+            @if (Model?.Lyric != null)
+            {
+                <pre style="white-space: pre-wrap; margin:0;">@Model.Lyric.Content</pre>
+            }
+            else if (!string.IsNullOrWhiteSpace(Model?.Lyrics))
+            {
+                <pre style="white-space: pre-wrap; margin:0;">@Model.Lyrics</pre>
+            }
+            else
+            {
+                <p class="text-muted">No stored lyrics</p>
+            }
+        </div>
+
+        <div class="form-check mt-3">
+            <input class="form-check-input" type="checkbox" name="RemoveLyric" id="RemoveLyric" value="true" />
+            <label class="form-check-label" for="RemoveLyric">Remove stored lyrics</label>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="UploadedAt" class="form-label"></label>
+        <input asp-for="UploadedAt" class="form-control" />
+        <span asp-validation-for="UploadedAt" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="UploadedById" class="form-label"></label>
+        <input asp-for="UploadedById" class="form-control" />
+        <span asp-validation-for="UploadedById" class="text-danger"></span>
+    </div>
+
+    <div class="col-12 d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
