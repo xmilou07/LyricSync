@@ -337,12 +337,49 @@ namespace LyricSync.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var song = await _context.Song.FindAsync(id);
-            if (song != null)
+            // load song and include lyric so we can remove associated data
+            var song = await _context.Song.Include(s => s.Lyric).FirstOrDefaultAsync(s => s.Id == id);
+            if (song == null)
             {
-                _context.Song.Remove(song);
-                _logger.LogInformation("Song {Id} removed from DB", id);
+                _logger.LogWarning("DeleteConfirmed: song {Id} not found", id);
+                return RedirectToAction(nameof(Index));
             }
+
+            // delete MP3 file from disk if present
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(song.MP3File))
+                {
+                    // MP3File stored as "/uploads/music/xxxx.mp3" - map to wwwroot
+                    var relative = song.MP3File.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+                    var fullPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", relative);
+                    if (System.IO.File.Exists(fullPath))
+                    {
+                        System.IO.File.Delete(fullPath);
+                        _logger.LogInformation("Deleted MP3 file at {Path}", fullPath);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("MP3 file not found on disk at {Path}", fullPath);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to delete MP3 file for song {Id}", id);
+                // continue - don't fail the whole delete because of file system issues
+            }
+
+            // remove associated lyric row if present
+            if (song.Lyric != null)
+            {
+                _context.Lyric.Remove(song.Lyric);
+                _logger.LogInformation("Removed Lyric {LyricId} associated with song {SongId}", song.Lyric.Id, song.Id);
+            }
+
+            // remove song
+            _context.Song.Remove(song);
+            _logger.LogInformation("Song {Id} removed from DB", id);
 
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
