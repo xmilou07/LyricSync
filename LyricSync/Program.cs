@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using LyricSync.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +24,9 @@ builder.Services.AddDefaultIdentity<ApplicationUser>()
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+// register lyric timing generator
+builder.Services.AddSingleton<LyricTimingGenerator>();
 
 var app = builder.Build();
 

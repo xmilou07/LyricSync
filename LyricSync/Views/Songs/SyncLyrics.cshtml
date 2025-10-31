@@ -1,0 +1,151 @@
+﻿@model LyricSync.Models.Song
+@{
+    ViewData["Title"] = "Sync Lyrics";
+}
+
+<h1 style="color:#4a3aff;">Sync Lyrics for @Model.Title</h1>
+
+<audio id="audioPlayer" controls style="width:100%;">
+    <source src="@Url.Content(Model.MP3File)" type="audio/mpeg" />
+</audio>
+
+<div id="lyricsContainer" class="mt-3" style="max-height:400px; overflow-y:auto; border:1px solid #ccc; padding:10px;"></div>
+
+<div class="mt-3">
+    <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+</div>
+
+@section Scripts {
+    <script>
+        const audio = document.getElementById('audioPlayer');
+        const lyricsContainer = document.getElementById('lyricsContainer');
+        let lyrics = [];
+
+        async function loadLyrics(songId) {
+            const res = await fetch(`/api/lyrics/${songId}`);
+            if (!res.ok) {
+                lyricsContainer.textContent = 'Failed to load lyrics.';
+                return;
+            }
+
+            const data = await res.json();
+
+            // normalize times to numbers or null
+            lyrics = data.map(item => ({
+                time: item.time === null ? null : Number(item.time),
+                text: item.text || ''
+            }));
+
+            lyricsContainer.innerHTML = '';
+
+            const hasTimestamps = lyrics.some(l => l.time !== null);
+
+            if (!hasTimestamps) {
+                // if no timestamps, generate approximate timestamps evenly across audio duration
+                const generateAndRender = () => {
+                    const duration = audio.duration || 0;
+                    if (!duration || isNaN(duration) || !isFinite(duration)) {
+                        // still no duration; inform user and render plain lines
+                        lyrics.forEach(line => {
+                            const p = document.createElement('p');
+                            p.textContent = line.text;
+                            lyricsContainer.appendChild(p);
+                        });
+                        const info = document.createElement('div');
+                        info.className = 'text-muted mt-2';
+                        info.textContent = 'No timestamps found. Audio duration unknown so automatic syncing is disabled.';
+                        lyricsContainer.parentNode.insertBefore(info, lyricsContainer.nextSibling);
+                        return;
+                    }
+
+                    const n = lyrics.length;
+                    if (n === 0) return;
+
+                    // Distribute lines across duration leaving last 0.5s to avoid overflow
+                    const usable = Math.max(duration - 0.5, 0.5);
+                    for (let i = 0; i < n; i++) {
+                        // place each line at proportional time; start at small offset
+                        const t = Math.min((i / n) * usable, Math.max(0, usable - 0.1));
+                        lyrics[i].time = Number(t.toFixed(3));
+                    }
+
+                    // render lines with times
+                    lyrics.forEach(line => {
+                        const p = document.createElement('p');
+                        p.textContent = line.text;
+                        if (line.time !== null) p.dataset.time = String(line.time);
+                        lyricsContainer.appendChild(p);
+                    });
+
+                    // attach sync handler
+                    audio.addEventListener('timeupdate', syncLyrics);
+
+                    const info = document.createElement('div');
+                    info.className = 'text-muted mt-2';
+                    info.textContent = 'No timestamps found. Generated approximate timings for syncing.';
+                    lyricsContainer.parentNode.insertBefore(info, lyricsContainer.nextSibling);
+                };
+
+                if (audio.readyState >= 1 && !isNaN(audio.duration) && isFinite(audio.duration)) {
+                    generateAndRender();
+                } else {
+                    const onMetadata = () => {
+                        generateAndRender();
+                        audio.removeEventListener('loadedmetadata', onMetadata);
+                    };
+                    audio.addEventListener('loadedmetadata', onMetadata);
+                }
+
+                return;
+            }
+
+            // render lines with data-time attribute; keep array index in sync
+            lyrics.forEach(line => {
+                const p = document.createElement('p');
+                p.textContent = line.text;
+                if (line.time !== null) p.dataset.time = String(line.time);
+                lyricsContainer.appendChild(p);
+            });
+
+            // attach sync handler
+            audio.addEventListener('timeupdate', syncLyrics);
+        }
+
+        function syncLyrics() {
+            const currentTime = audio.currentTime;
+            let activeIndex = -1;
+
+            for (let i = 0; i < lyrics.length; i++) {
+                const t = lyrics[i].time;
+                if (t !== null && currentTime >= t) {
+                    activeIndex = i;
+                }
+            }
+
+            if (activeIndex >= 0) {
+                const allLines = lyricsContainer.querySelectorAll('p');
+                allLines.forEach(p => p.classList.remove('active'));
+                const activeP = allLines[activeIndex];
+                if (activeP) {
+                    activeP.classList.add('active');
+                    activeP.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        }
+
+        // load on page ready
+        document.addEventListener('DOMContentLoaded', () => loadLyrics(@Model.Id));
+    </script>
+
+    <style>
+        #lyricsContainer p {
+            margin: 4px 0;
+            transition: color 0.3s;
+        }
+
+        #lyricsContainer p.active {
+            color: #4a3aff;
+            font-weight: bold;
+        }
+    </style>
+}

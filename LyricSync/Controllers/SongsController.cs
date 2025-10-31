@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using LyricSync.Services;
 
 namespace LyricSync.Controllers
 {
@@ -17,11 +18,13 @@ namespace LyricSync.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<SongsController> _logger;
+        private readonly LyricTimingGenerator _timingGenerator;
 
-        public SongsController(ApplicationDbContext context, ILogger<SongsController> logger)
+        public SongsController(ApplicationDbContext context, ILogger<SongsController> logger, LyricTimingGenerator timingGenerator)
         {
             _context = context;
             _logger = logger;
+            _timingGenerator = timingGenerator;
         }
 
         // GET: Songs
@@ -166,9 +169,28 @@ namespace LyricSync.Controllers
                 var contentToStore = (lyricsContentFromFile ?? song.Lyrics)?.Trim();
                 if (!string.IsNullOrWhiteSpace(contentToStore))
                 {
+                    // attempt to auto-generate timestamps for the lyrics using TagLib for duration
+                    var fullMp3Path = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", song.MP3File.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                    var duration = _timingGenerator.GetAudioDurationSeconds(fullMp3Path);
+
+                    var storedContent = contentToStore;
+                    if (duration.HasValue)
+                    {
+                        try
+                        {
+                            var lrc = _timingGenerator.GenerateLrcFromLines(contentToStore, duration.Value);
+                            if (!string.IsNullOrWhiteSpace(lrc))
+                                storedContent = lrc;
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to auto-generate timings for song {SongId}", song.Id);
+                        }
+                    }
+
                     var lyric = new Lyric
                     {
-                        Content = contentToStore
+                        Content = storedContent
                     };
                     _context.Lyric.Add(lyric);
                     await _context.SaveChangesAsync();
@@ -388,6 +410,20 @@ namespace LyricSync.Controllers
         private bool SongExists(int id)
         {
             return _context.Song.Any(e => e.Id == id);
+        }
+
+        // GET: Songs/SyncLyrics/5
+        public async Task<IActionResult> SyncLyrics(int? id)
+        {
+            if (id == null)
+                return NotFound();
+
+            var song = await _context.Song.Include(s => s.Lyric).FirstOrDefaultAsync(s => s.Id == id);
+
+            if (song == null)
+                return NotFound();
+
+            return View(song); // passes Song (with Lyrics) to the view
         }
     }
 }
