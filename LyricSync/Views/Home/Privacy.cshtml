@@ -3,18 +3,61 @@
 }
 
 <div class="container my-5">
-    <section class="text-center mx-auto" style="max-width: 800px; line-height: 1.7;">
-        <h2 class="fw-bold mb-4" style="color: #4a3aff;">Privacy</h2>
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-10 col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-5">
+                    <h1 class="mb-3" style="color: #4a3aff;">Privacy Policy</h1>
+                    <p class="text-muted small mb-4"><strong>Last updated:</strong> November 5, 2025</p>
 
-        <p>
-            Your privacy is important to us. This application does not collect or store any personal data beyond what is necessary for user authentication and functionality.
-        </p>
+                    <p class="lead">Your privacy matters. This application only collects the essential personal information required for account management and authentication.</p>
 
-        <p>
-            I don’t really ask information from the users - only names, email and a password. <br />
-            This is because of the login featue.
-            To ensure the safety of this little information I gather, is being used and stored safe. <br />
-            I made this feature with the Microsoft Identity.
-        </p>
-    </section>
+                    <h2 class="h5 mt-4">What We Collect</h2>
+                    <ul class="list-unstyled mb-3">
+                        <li class="d-flex align-items-start mb-2">
+                            <span class="badge bg-primary me-3 rounded-pill" style="min-width:36px;">1</span>
+                            <div>
+                                <strong>Name</strong> – shown in the app to personalize your experience.
+                            </div>
+                        </li>
+                        <li class="d-flex align-items-start mb-2">
+                            <span class="badge bg-primary me-3 rounded-pill" style="min-width:36px;">2</span>
+                            <div>
+                                <strong>Email</strong> – used for login and password recovery.
+                            </div>
+                        </li>
+                        <li class="d-flex align-items-start">
+                            <span class="badge bg-primary me-3 rounded-pill" style="min-width:36px;">3</span>
+                            <div>
+                                <strong>Password</strong> – stored securely (hashed) to protect your account.
+                            </div>
+                        </li>
+                    </ul>
+
+                    <h2 class="h5 mt-4">How We Store Your Info</h2>
+                    <p>We use <strong>Microsoft Identity</strong> for account management which ensures secure storage practices:</p>
+                    <ul>
+                        <li>Your password is <strong>not stored in plain text</strong> — it is hashed and salted using identity's built-in mechanisms.</li>
+                        <li>Name and email are kept in the application's database and are only used when necessary for the app features.</li>
+                        <li>All network traffic is encrypted with <strong>HTTPS</strong>.</li>
+                    </ul>
+
+                    <h2 class="h5 mt-4">How We Use Your Info</h2>
+                    <ul>
+                        <li>Create and manage your account.</li>
+                        <li>Authenticate and authorize access to your data.</li>
+                        <li>Provide password reset functionality.</li>
+                    </ul>
+
+                    <h2 class="h5 mt-4">Your Control</h2>
+                    <p>You can update or delete your account at any time via the account settings. Deleting your account will remove associated data from the system.</p>
+
+                    <div class="mt-4 d-flex justify-content-between align-items-center">
+                        <small class="text-muted">Questions? Contact the site administrator.</small>
+                        <a asp-area="Identity" asp-page="/Account/Manage/PersonalData" class="btn btn-outline-secondary btn-sm">Manage account</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
