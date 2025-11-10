@@ -20,14 +20,13 @@ namespace LyricSync.Models
 
         // keep this for form binding; lyrics will be stored in the Lyric table
         [NotMapped]
+        [StringLength(10000, ErrorMessage = "Lyrics cannot be longer than 10,000 characters.")]
         public string Lyrics { get; set; } = string.Empty;
 
         [Required]
         public string MP3File { get; set; } = string.Empty;
 
         public DateTime UploadedAt { get; set; }
-
-        public int UploadedById { get; set; }
 
         [Required]
         public string Genre { get; set; } = string.Empty;
@@ -40,5 +39,9 @@ namespace LyricSync.Models
 
         // navigation property for the one-to-one relationship to Lyric
         public Lyric? Lyric { get; set; }
+
+        public string UploadedById { get; set; } = string.Empty;
+        public ApplicationUser? UploadedBy { get; set; }
+
     }
 }

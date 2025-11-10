@@ -142,14 +142,17 @@ namespace LyricSync.Migrations
                     b.Property<DateTime>("UploadedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("UploadedById")
-                        .HasColumnType("int");
+                    b.Property<string>("UploadedById")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("LyricsId")
                         .IsUnique()
                         .HasFilter("[LyricsId] IS NOT NULL");
+
+                    b.HasIndex("UploadedById");
 
                     b.ToTable("Song");
                 });
@@ -297,7 +300,15 @@ namespace LyricSync.Migrations
                         .WithOne("Song")
                         .HasForeignKey("LyricSync.Models.Song", "LyricsId");
 
+                    b.HasOne("LyricSync.Models.ApplicationUser", "UploadedBy")
+                        .WithMany()
+                        .HasForeignKey("UploadedById")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Lyric");
+
+                    b.Navigation("UploadedBy");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

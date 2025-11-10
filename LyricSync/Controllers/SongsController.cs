@@ -32,7 +32,15 @@ namespace LyricSync.Controllers
         public async Task<IActionResult> Index()
         {
             _logger.LogDebug("Loading songs index");
-            return View(await _context.Song.Include(s => s.Lyric).ToListAsync());
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (User.IsInRole("Admin"))
+                return View(await _context.Song.Include(s=>s.Lyric).ToListAsync());
+
+            var items = await _context.Song
+                .Where(s => s.UploadedById == userId)
+                .Include(s => s.Lyric)
+                .ToListAsync();
+            return View(items);
         }
 
         // GET: Songs/Details/5
@@ -89,7 +97,7 @@ namespace LyricSync.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize]
-        public async Task<IActionResult> Create([Bind("Title,Artist,Album,Lyrics,Genre,UploadedById")] Song song, IFormFile? mp3File, IFormFile? lyricsFile)
+        public async Task<IActionResult> Create([Bind("Title,Artist,Album,Lyrics,Genre")] Song song, IFormFile? mp3File, IFormFile? lyricsFile)
         {
             _logger.LogDebug("Create POST for Title='{Title}'", song?.Title);
 
@@ -197,6 +205,11 @@ namespace LyricSync.Controllers
 
                     // link the saved lyric to the previously saved song (Song.LyricsId -> Lyric.Id)
                     song.LyricsId = lyric.Id;
+
+                    // Set the userID
+                    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+                    song.UploadedById = userId;
+
                     _context.Song.Update(song);
                     await _context.SaveChangesAsync();
 
@@ -289,7 +302,7 @@ namespace LyricSync.Controllers
                 existingSong.Album = song.Album;
                 existingSong.Genre = song.Genre;
                 existingSong.UploadedAt = song.UploadedAt != default ? song.UploadedAt : existingSong.UploadedAt;
-                existingSong.UploadedById = song.UploadedById != 0 ? song.UploadedById : existingSong.UploadedById;
+               
 
                 // handle lyrics: update existing Lyric or create a new one if needed
                 var incomingLyrics = song.Lyrics?.Trim();
