@@ -28,6 +28,10 @@ builder.Services.AddControllersWithViews();
 // register lyric timing generator
 builder.Services.AddSingleton<LyricTimingGenerator>();
 
+// register file storage and song upload service
+builder.Services.AddSingleton<IFileStorageService, FileStorageService>();
+builder.Services.AddScoped<ISongUploadService, SongUploadService>();
+
 var app = builder.Build();
 
 // Show developer exception page in Development so you see full error in browser

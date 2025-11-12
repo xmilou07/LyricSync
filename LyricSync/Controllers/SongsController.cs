@@ -19,12 +19,16 @@ namespace LyricSync.Controllers
         private readonly ApplicationDbContext _context;
         private readonly ILogger<SongsController> _logger;
         private readonly LyricTimingGenerator _timingGenerator;
+        private readonly ISongUploadService _songUploadService;
+        private readonly IFileStorageService _fileStorage;
 
-        public SongsController(ApplicationDbContext context, ILogger<SongsController> logger, LyricTimingGenerator timingGenerator)
+        public SongsController(ApplicationDbContext context, ILogger<SongsController> logger, LyricTimingGenerator timingGenerator, ISongUploadService songUploadService, IFileStorageService fileStorage)
         {
             _context = context;
             _logger = logger;
             _timingGenerator = timingGenerator;
+            _songUploadService = songUploadService;
+            _fileStorage = fileStorage;
         }
 
         // GET: Songs
@@ -119,104 +123,11 @@ namespace LyricSync.Controllers
                     return View(song);
                 }
 
-                // Prepare folders
-                var uploadsRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-                var musicFolder = Path.Combine(uploadsRoot, "music");
-                var lyricsFolder = Path.Combine(uploadsRoot, "lyrics");
-                Directory.CreateDirectory(musicFolder);
-                Directory.CreateDirectory(lyricsFolder);
+                // Use the song upload service to handle the heavy lifting
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+                var savedSong = await _songUploadService.UploadSongAsync(song, mp3File, lyricsFile, userId);
 
-                // Save MP3 and set DB field MP3File
-                var mp3FileName = $"{Guid.NewGuid()}{Path.GetExtension(mp3File.FileName)}";
-                var mp3Path = Path.Combine(musicFolder, mp3FileName);
-                await using (var stream = new FileStream(mp3Path, FileMode.Create))
-                {
-                    await mp3File.CopyToAsync(stream);
-                }
-
-                song.MP3File = $"/uploads/music/{mp3FileName}";
-                _logger.LogInformation("Saved MP3 to {Path}", song.MP3File);
-
-                // Save optional lyrics file to disk and read its content
-                string? lyricsContentFromFile = null;
-                if (lyricsFile != null && lyricsFile.Length > 0)
-                {
-                    var lyricsFileName = $"{Guid.NewGuid()}{Path.GetExtension(lyricsFile.FileName)}";
-                    var lyricsPath = Path.Combine(lyricsFolder, lyricsFileName);
-                    await using (var stream = new FileStream(lyricsPath, FileMode.Create))
-                    {
-                        await lyricsFile.CopyToAsync(stream);
-                    }
-
-                    _logger.LogInformation("Saved lyrics file to {Path}", $"/uploads/lyrics/{lyricsFileName}");
-
-                    // read uploaded lyrics text
-                    lyricsFile.OpenReadStream().Position = 0;
-                    using var reader = new StreamReader(lyricsFile.OpenReadStream());
-                    lyricsContentFromFile = await reader.ReadToEndAsync();
-                }
-
-                song.UploadedAt = DateTime.UtcNow;
-                // song.UploadedById = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)); 
-
-                // Now that server-only field MP3File is set, revalidate the full model
-                ModelState.Clear();
-                if (!TryValidateModel(song))
-                {
-                    var errors = ModelState
-                        .Where(kv => kv.Value.Errors.Count > 0)
-                        .Select(kv => $"{kv.Key}: {string.Join(", ", kv.Value.Errors.Select(e => e.ErrorMessage))}");
-                    _logger.LogWarning("Model invalid after file handling: {Errors}", string.Join(" | ", errors));
-                    return View(song);
-                }
-
-                _context.Song.Add(song);
-                await _context.SaveChangesAsync();
-
-                // After saving song, persist lyrics (from textarea or lyrics file) to Lyric table
-                var contentToStore = (lyricsContentFromFile ?? song.Lyrics)?.Trim();
-                if (!string.IsNullOrWhiteSpace(contentToStore))
-                {
-                    // attempt to auto-generate timestamps for the lyrics using TagLib for duration
-                    var fullMp3Path = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", song.MP3File.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-                    var duration = _timingGenerator.GetAudioDurationSeconds(fullMp3Path);
-
-                    var storedContent = contentToStore;
-                    if (duration.HasValue)
-                    {
-                        try
-                        {
-                            var lrc = _timingGenerator.GenerateLrcFromLines(contentToStore, duration.Value);
-                            if (!string.IsNullOrWhiteSpace(lrc))
-                                storedContent = lrc;
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogWarning(ex, "Failed to auto-generate timings for song {SongId}", song.Id);
-                        }
-                    }
-
-                    var lyric = new Lyric
-                    {
-                        Content = storedContent
-                    };
-                    _context.Lyric.Add(lyric);
-                    await _context.SaveChangesAsync();
-
-                    // link the saved lyric to the previously saved song (Song.LyricsId -> Lyric.Id)
-                    song.LyricsId = lyric.Id;
-
-                    // Set the userID
-                    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
-                    song.UploadedById = userId;
-
-                    _context.Song.Update(song);
-                    await _context.SaveChangesAsync();
-
-                    _logger.LogInformation("Stored lyrics for song {SongId} in Lyric table", song.Id);
-                }
-
-                _logger.LogInformation("Song saved to database with id {Id}", song.Id);
+                _logger.LogInformation("Song saved to database with id {Id}", savedSong.Id);
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
@@ -276,58 +187,7 @@ namespace LyricSync.Controllers
                     return NotFound();
                 }
 
-                // handle MP3 replacement
-                if (MP3File != null && MP3File.Length > 0)
-                {
-                    var uploadsRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-                    var musicFolder = Path.Combine(uploadsRoot, "music");
-                    Directory.CreateDirectory(musicFolder);
-                    var mp3FileName = $"{Guid.NewGuid()}{Path.GetExtension(MP3File.FileName)}";
-                    var mp3Path = Path.Combine(musicFolder, mp3FileName);
-                    await using (var stream = new FileStream(mp3Path, FileMode.Create))
-                    {
-                        await MP3File.CopyToAsync(stream);
-                    }
-                    existingSong.MP3File = $"/uploads/music/{mp3FileName}";
-                    _logger.LogInformation("Updated MP3 file for song {Id}", existingSong.Id);
-                }
-                else
-                {
-                    existingSong.MP3File = ExistingFilePath ?? existingSong.MP3File;
-                }
-
-                // update scalar properties from the posted model
-                existingSong.Title = song.Title;
-                existingSong.Artist = song.Artist;
-                existingSong.Album = song.Album;
-                existingSong.Genre = song.Genre;
-                existingSong.UploadedAt = song.UploadedAt != default ? song.UploadedAt : existingSong.UploadedAt;
-               
-
-                // handle lyrics: update existing Lyric or create a new one if needed
-                var incomingLyrics = song.Lyrics?.Trim();
-
-                if (removeLyric == true)
-                {
-                    if (existingSong.Lyric != null)
-                    {
-                        _context.Lyric.Remove(existingSong.Lyric);
-                        existingSong.Lyric = null;
-                        existingSong.LyricsId = null;
-                    }
-                }
-                else if (existingSong.Lyric != null)
-                {
-                    existingSong.Lyric.Content = incomingLyrics ?? string.Empty;
-                }
-                else if (!string.IsNullOrWhiteSpace(incomingLyrics))
-                {
-                    existingSong.Lyric = new Lyric { Content = incomingLyrics };
-                }
-
-                // save all changes in one transaction
-                _context.Update(existingSong);
-                await _context.SaveChangesAsync();
+                await _songUploadService.UpdateSongAsync(existingSong, song, MP3File, ExistingFilePath, removeLyric);
                 _logger.LogInformation("Song {Id} updated", existingSong.Id);
             }
             catch (DbUpdateConcurrencyException)
@@ -383,21 +243,7 @@ namespace LyricSync.Controllers
             // delete MP3 file from disk if present
             try
             {
-                if (!string.IsNullOrWhiteSpace(song.MP3File))
-                {
-                    // MP3File stored as "/uploads/music/xxxx.mp3" - map to wwwroot
-                    var relative = song.MP3File.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
-                    var fullPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", relative);
-                    if (System.IO.File.Exists(fullPath))
-                    {
-                        System.IO.File.Delete(fullPath);
-                        _logger.LogInformation("Deleted MP3 file at {Path}", fullPath);
-                    }
-                    else
-                    {
-                        _logger.LogInformation("MP3 file not found on disk at {Path}", fullPath);
-                    }
-                }
+                await _songUploadService.DeleteSongFilesAsync(song);
             }
             catch (Exception ex)
             {
@@ -409,7 +255,6 @@ namespace LyricSync.Controllers
             if (song.Lyric != null)
             {
                 _context.Lyric.Remove(song.Lyric);
-                _logger.LogInformation("Removed Lyric {LyricId} associated with song {SongId}", song.Lyric.Id, song.Id);
             }
 
             // remove song
